@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Tracker</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 650px;
+      margin: 40px auto;
+      padding: 0 20px;
+      background: #fff;
+      color: #222;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 24px;
+    }
+
+    h2 {
+      font-size: 16px;
+      margin-bottom: 12px;
+      color: #444;
+    }
+
+    input,
+    textarea {
+      display: block;
+      width: 100%;
+      padding: 8px 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+      font-family: sans-serif;
+    }
+
+    button {
+      padding: 8px 16px;
+      background: #222;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    button:hover {
+      background: #444;
+    }
+
+    .task {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+
+    .task.done {
+      background: #f5f5f5;
+      color: #888;
+      text-decoration: line-through;
+    }
+
+    .task-title {
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    .task-desc {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 10px;
+    }
+
+    .task-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .task-actions button {
+      background: none;
+      color: #444;
+      border: 1px solid #ccc;
+      font-size: 12px;
+      padding: 4px 10px;
+    }
+
+    .task-actions button:hover {
+      border-color: #888;
+      background: none;
+      color: #222;
+    }
+
+    #message {
+      margin-top: 12px;
+      font-size: 13px;
+      color: green;
+    }
+
+    hr {
+      margin: 28px 0;
+      border: none;
+      border-top: 1px solid #eee;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>Task Tracker</h1>
+
+  <h2>Add task</h2>
+  <input type="text" id="title" placeholder="Title" />
+  <textarea id="desc" placeholder="Description" rows="3"></textarea>
+  <button onclick="createTask()">Add</button>
+  <div id="message"></div>
+
+  <hr>
+
+  <h2>Tasks</h2>
+  <div id="taskList">Loading...</div>
+
+  <script>
+    const API = 'https://task-tracker-vooz.onrender.com/api/tasks';
+
+    async function loadTasks() {
+      try {
+        const res = await fetch(API);
+        const tasks = await res.json();
+        const list = document.getElementById('taskList');
+
+        if (tasks.length === 0) {
+          list.innerHTML = '<p>No tasks yet.</p>';
+          return;
+        }
+
+        list.innerHTML = tasks.map(t => `
+        <div class="task ${t.isCompleted ? 'done' : ''}">
+          <div class="task-title">${t.title}</div>
+          <div class="task-desc">${t.description || ''}</div>
+          <div class="task-actions">
+            ${!t.isCompleted ? `<button onclick="completeTask(${t.id}, '${t.title}', '${t.description}')">Complete</button>` : ''}
+            <button onclick="deleteTask(${t.id})">Delete</button>
+          </div>
+        </div>
+      `).join('');
+      } catch (e) {
+        document.getElementById('taskList').innerHTML = '<p>Could not load tasks.</p>';
+      }
+    }
+
+    async function createTask() {
+      const title = document.getElementById('title').value.trim();
+      const description = document.getElementById('desc').value.trim();
+      if (!title) { showMsg('Title is required.'); return; }
+
+      await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, description })
+      });
+
+      document.getElementById('title').value = '';
+      document.getElementById('desc').value = '';
+      showMsg('Task added!');
+      loadTasks();
+    }
+
+    async function completeTask(id, title, description) {
+      await fetch(`${API}/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, description, isCompleted: true })
+      });
+      loadTasks();
+    }
+
+    async function deleteTask(id) {
+      await fetch(`${API}/${id}`, { method: 'DELETE' });
+      loadTasks();
+    }
+
+    function showMsg(msg) {
+      const el = document.getElementById('message');
+      el.textContent = msg;
+      setTimeout(() => el.textContent = '', 3000);
+    }
+
+    loadTasks();
+  </script>
+
+</body>
+
+</html>
